@@ -13,5 +13,6 @@ logging.basicConfig(level=logging.DEBUG)
 app = firebase_admin.initialize_app()
 db = firestore.client()
 
-sensor = SDS011('/dev/tty.usbserial-1440', use_query_mode=True)
+# TODO: Automatically find the device based on "usbserial-*"
+sensor = SDS011('/dev/tty.usbserial-1460', use_query_mode=True)
 

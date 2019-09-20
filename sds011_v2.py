@@ -48,25 +48,27 @@ class SDS011(object):
         """
         self.ser = serial.Serial(port=serial_port, baudrate=baudrate, timeout=timeout)
         self.ser.flush()
-        self.reporting_mode(self.QUERY_MODE if use_query_mode else self.ACTIVE_MODE)
+        self.default_timeout = timeout
+        self.wake()
+        self.reporting_mode = self.QUERY_MODE if use_query_mode else self.ACTIVE_MODE
 
-    def _execute(self, cmd):
+    def _execute(self, cmd, id1=b'\xff', id2=b'\xff'):
         """Writes a byte sequence to the serial.
         """
-        cmd_bytes = self._wrap_cmd(cmd)
+
+        cmd += id1 + id2
+        checksum = bytes([sum(d for d in cmd) % 256])
+        cmd_bytes = self.HEAD + self.CMD_ID + cmd + checksum + self.TAIL
+
         logging.debug(f'Command: {cmd_bytes}')
         self.ser.write(cmd_bytes)
 
-    def _wrap_cmd(self, cmd, id1=b'\xff', id2=b'\xff'):
-        """Get command header and command ID bytes.
-        @rtype: list
-        """
-        cmd += id1 + id2
-        checksum = bytes([sum(d for d in cmd) % 256])
-        return self.HEAD + self.CMD_ID + cmd + checksum + self.TAIL
-
-    def _get_reply(self, op_id=None):
+    def _get_reply(self, op_id=None, timeout=None):
         """Read reply from device."""
+
+        if timeout:
+            self.ser.timeout = timeout
+
         raw = self.ser.read(size=10)
         logging.debug(f'Reply: {raw}')
         if not raw:
@@ -87,6 +89,8 @@ class SDS011(object):
             if op_id and bytes([raw[2]]) != op_id:
                 raise IOError('Response does not match operation!')
 
+        self.ser.timeout = self.default_timeout
+
         return raw
 
     def _decode_data(self, raw):
@@ -100,18 +104,30 @@ class SDS011(object):
             8 - Checksum - low byte of sum of bytes 2-7
             9 - Tail
         """
+
         logging.debug(f'Processing frame: {raw}')
         pm25 = int.from_bytes(raw[2:4], byteorder='little') / 10.0
         pm10 = int.from_bytes(raw[4:6], byteorder='little') / 10.0
         return (pm25, pm10)
 
-    def reporting_mode(self, mode, write=True):
-        """Get sleep command. Does not contain checksum and tail.
-        @rtype: list
-        """
-        cmd = self.REPORTING_MODE_SETTING + (self.WRITE_SETTING if write else self.READ_SETTING) + mode + b'\x00' * 10
+    @property
+    def reporting_mode(self):
+        cmd = self.REPORTING_MODE_SETTING + self.READ_SETTING + b'\x00' * 11
         self._execute(cmd)
-        return self._get_reply(op_id=self.REPORTING_MODE_SETTING)
+        reply = self._get_reply(op_id=self.REPORTING_MODE_SETTING)
+        if bytes([reply[4]]) == self.QUERY_MODE:
+            return 'sensor.QUERY_MODE'
+        return 'sensor.ACTIVE_MODE'
+
+    @reporting_mode.setter
+    def reporting_mode(self, mode):
+        if mode != self.ACTIVE_MODE and mode != self.QUERY_MODE:
+            raise ValueError('Reporting mode must either be 0 (.ACTIVE_MODE) or 1 (.QUERY_MODE).')
+
+        cmd = self.REPORTING_MODE_SETTING + self.WRITE_SETTING + mode + b'\x00' * 10
+        self._execute(cmd)
+        reply = self._get_reply(op_id=self.REPORTING_MODE_SETTING)
+        return reply[4]
 
     def query(self):
         """Query the device and read the data.
@@ -133,31 +149,37 @@ class SDS011(object):
 
     def sleep(self):
         self._sleep(self.SLEEP_MODE)
-    
+
     def wake(self):
         self._sleep(self.WORK_MODE)
 
-    def work_period(self, work_time, write=True):
+    @property
+    def work_period(self):
+        cmd = self.WORK_PERIOD_SETTING + self.READ_SETTING + b'\x00' * 11
+        self._execute(cmd)
+        reply = self._get_reply(self.WORK_PERIOD_SETTING)
+        return reply[4]
+
+    @work_period.setter
+    def work_period(self, work_time):
         """Get work period command. Does not contain checksum and tail.
         @rtype: list
         """
         if work_time < 0:
             work_time = self.CONTINUOUS_MODE
         if work_time > 30:
-            raise ValueError('Working period must not be greater than 30 (minutes).')
-        cmd = self.WORK_PERIOD_SETTING + (self.WRITE_SETTING if write else self.READ_SETTING) + bytes([work_time]) + b'\x00' * 10
+            logging.warn(f'Maximum work period is 30 minutes; received {work_time}, setting to 30.')
+            work_time = 30
+
+        cmd = self.WORK_PERIOD_SETTING + self.WRITE_SETTING + bytes([work_time]) + b'\x00' * 10
         self._execute(cmd)
-        return self._get_reply(self.WORK_PERIOD_SETTING)
+        reply = self._get_reply(self.WORK_PERIOD_SETTING)
+        return reply[4]
 
     def read(self):
         """Read sensor data.
         @return: PM2.5 and PM10 concetration in micrograms per cude meter.
         @rtype: tuple(float, float) - first is PM2.5.
         """
-        byte = 0
-        while byte != self.HEAD:
-            byte = self.ser.read(size=1)
-            d = self.ser.read(size=10)
-            if d[0:1] == b'\xc0':
-                data = self._process_frame(byte + d)
-                return data
+        timeout = self.work_period * 60 + 1
+        return self._get_reply(timeout=timeout)

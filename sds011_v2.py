@@ -43,13 +43,14 @@ class SDS011(object):
 
     logging.getLogger(__name__)
 
-    def __init__(self, serial_port, baudrate=9600, timeout=2, use_query_mode=True):
+    def __init__(self, serial_port, baudrate=9600, timeout=2, use_query_mode=True, work_period=0):
         """Initialise and open serial port.
         """
         self.ser = serial.Serial(port=serial_port, baudrate=baudrate, timeout=timeout)
         self.ser.flush()
         self.default_timeout = timeout
         self.wake()
+        self.work_period = work_period
         self.reporting_mode = self.QUERY_MODE if use_query_mode else self.ACTIVE_MODE
 
     def _execute(self, cmd, id1=b'\xff', id2=b'\xff'):

@@ -14,5 +14,7 @@ app = firebase_admin.initialize_app()
 db = firestore.client()
 
 # TODO: Automatically find the device based on "usbserial-*"
-sensor = SDS011('/dev/tty.usbserial-1460', use_query_mode=True)
+sensor = SDS011('/dev/tty.usbserial-1460', use_query_mode=False, work_period=1)
 
+reading = sensor.read()
+print(reading)

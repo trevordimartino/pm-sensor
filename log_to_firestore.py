@@ -1,5 +1,5 @@
 from datetime import datetime
-import logging
+# import logging
 import uuid
 
 import firebase_admin

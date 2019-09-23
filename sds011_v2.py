@@ -3,7 +3,6 @@ Adapted from https://github.com/ikalchev/py-sds011/blob/master/sds011/__init__.p
 """
 
 import logging
-import struct
 import serial
 
 

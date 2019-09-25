@@ -65,8 +65,9 @@ class SDS011(object):
 
         if timeout:
             self.ser.timeout = timeout
-
         raw = self.ser.read(size=10)
+        self.ser.timeout = self.default_timeout
+
         self.logger.debug(f'Reply: {raw}')
         if not raw:
             self.logger.warning('Device did not respond; try sending a .wake()?')
@@ -77,16 +78,16 @@ class SDS011(object):
             raise IOError('Checksum invalid!')
 
         response_type = bytes([raw[1]])
-        if response_type == self.DATA_RESPONSE:
+        if response_type == self.DATA_RESPONSE and not op_id:
             return self._decode_data(raw)
+        else:
+            return self._get_reply(op_id=op_id)
 
         if response_type == self.SETTING_RESPONSE:
             if not op_id:
                 self.logger.warning('Set the op_id when calling ._get_reply() for additional sanity checking.')
             if op_id and bytes([raw[2]]) != op_id:
                 raise IOError('Response does not match operation!')
-
-        self.ser.timeout = self.default_timeout
 
         return raw
 

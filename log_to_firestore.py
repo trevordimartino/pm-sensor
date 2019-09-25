@@ -22,7 +22,7 @@ with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
 
 # Credentials pulled from file named in GOOGLE_APPLICATION_CREDENTIALS os env var
 creds = credentials.Certificate(GOOGLE_APP_CREDS_PATH)
-app = firebase_admin.initialize_app()
+app = firebase_admin.initialize_app(creds)
 db = firestore.client()
 
 sensor = SDS011(DEVICE_LOCATION, use_query_mode=False, work_period=WORK_PERIOD)

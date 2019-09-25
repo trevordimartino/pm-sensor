@@ -61,7 +61,9 @@ class SDS011(object):
         self.ser.write(cmd_bytes)
 
     def _get_reply(self, op_id=None, timeout=None):
-        """Read reply from device."""
+        """Read reply from device.
+        kwarg `op_id` defaults to `None`, meaning we expect a data reply
+        """
 
         if timeout:
             self.ser.timeout = timeout
@@ -78,9 +80,10 @@ class SDS011(object):
             raise IOError('Checksum invalid!')
 
         response_type = bytes([raw[1]])
-        if response_type == self.DATA_RESPONSE and not op_id:
-            return self._decode_data(raw)
-        else:
+        if response_type == self.DATA_RESPONSE:
+            if not op_id:
+                return self._decode_data(raw)
+            # op_id was set, so we weren't expecting data; grab the next reply
             return self._get_reply(op_id=op_id)
 
         if response_type == self.SETTING_RESPONSE:

@@ -5,12 +5,14 @@ import uuid
 
 import firebase_admin
 from firebase_admin import firestore
+from firebase_admin import credentials
 
 from sds011_v2 import SDS011
 
 
-DEVICE_LOCATION = '/dev/tty.usbserial-1460'
-WORK_PERIOD = 1  # Number of minutes between readings, up to 30
+DEVICE_LOCATION = '/dev/ttyUSB0'
+WORK_PERIOD = 10  # Number of minutes between readings, up to 30
+GOOGLE_APP_CREDS_PATH = '/home/pi/Downloads/pm-sensor-creds.json'
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -19,6 +21,7 @@ with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
     ip_address = s.getsockname()[0]
 
 # Credentials pulled from file named in GOOGLE_APPLICATION_CREDENTIALS os env var
+creds = credentials.Certificate(GOOGLE_APP_CREDS_PATH)
 app = firebase_admin.initialize_app()
 db = firestore.client()
 

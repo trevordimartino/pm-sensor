@@ -115,6 +115,7 @@ class SDS011(object):
         cmd = self.REPORTING_MODE_SETTING + self.READ_SETTING + b'\x00' * 11
         self._execute(cmd)
         reply = self._get_reply(op_id=self.REPORTING_MODE_SETTING)
+        logging.debug(f'Reporting mode read: {reply[4]}')
         if bytes([reply[4]]) == self.QUERY_MODE:
             return 'sensor.QUERY_MODE'
         return 'sensor.ACTIVE_MODE'
@@ -127,6 +128,7 @@ class SDS011(object):
         cmd = self.REPORTING_MODE_SETTING + self.WRITE_SETTING + mode + b'\x00' * 10
         self._execute(cmd)
         reply = self._get_reply(op_id=self.REPORTING_MODE_SETTING)
+        logging.debug(f'Reporting mode set: {reply[4]}')
         return reply[4]
 
     def query(self):
@@ -148,16 +150,26 @@ class SDS011(object):
         return self._get_reply(op_id=self.SLEEP_SETTING)
 
     def sleep(self):
-        self._sleep(self.SLEEP_MODE)
+        return self._sleep(self.SLEEP_MODE)
 
     def wake(self):
-        self._sleep(self.WORK_MODE)
+        attempts = 0
+        awake = self._sleep(self.WORK_MODE)
+        if not awake and attempts < 5:
+            attempts += 1
+            awake = self._sleep(self.WORK_MODE)
+        elif not awake:
+            logging.error('Device has not awoken after 5 attempts.')
+            return
+
+        return awake
 
     @property
     def work_period(self):
         cmd = self.WORK_PERIOD_SETTING + self.READ_SETTING + b'\x00' * 11
         self._execute(cmd)
         reply = self._get_reply(self.WORK_PERIOD_SETTING)
+        logging.debug(f'Work period read: {reply[4]}')
         return reply[4]
 
     @work_period.setter
@@ -174,6 +186,7 @@ class SDS011(object):
         cmd = self.WORK_PERIOD_SETTING + self.WRITE_SETTING + bytes([work_time]) + b'\x00' * 10
         self._execute(cmd)
         reply = self._get_reply(self.WORK_PERIOD_SETTING)
+        logging.debug(f'Work period set: {reply[4]}')
         return reply[4]
 
     def read(self):
@@ -181,7 +194,7 @@ class SDS011(object):
         @return: PM2.5 and PM10 concetration in micrograms per cude meter.
         @rtype: tuple(float, float) - first is PM2.5.
         """
-        if self.reporting_mode != 'sensor.ACTIVE_MODE':
+        if self.reporting_mode == 'sensor.QUERY_MODE':
             return self.query()
 
         timeout = self.work_period * 60 + 1

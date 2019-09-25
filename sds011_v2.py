@@ -154,6 +154,7 @@ class SDS011(object):
         awake = self._sleep(self.WORK_MODE)
         if not awake and attempts < 5:
             attempts += 1
+            self.logger.debug(f'Attempted to .wake() {attempts} time(s), trying again.')
             awake = self._sleep(self.WORK_MODE)
         elif not awake:
             self.logger.error('Device has not awoken after 5 attempts.')

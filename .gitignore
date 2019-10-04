@@ -1,3 +1,4 @@
 .vscode/
 .flake8
 Pipfile.lock
+.ipynb_checkpoints/

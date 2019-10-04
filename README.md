@@ -12,3 +12,7 @@ A sensor object for use with the SDS011 particulate matter sensor, with a demo s
 1. Run `pipenv run python log_to_firestore.py` to log a few readings to your firestore instance
 
 If you want to change how often readings are taken, update the `WORK_PERIOD` variable at the top of `log_to_firestore.py`
+
+
+### SDS011 Datasheet
+Find it here https://cdn.sparkfun.com/assets/parts/1/2/2/7/5/Laser_Dust_Sensor_Control_Protocol_V1.3.pdf

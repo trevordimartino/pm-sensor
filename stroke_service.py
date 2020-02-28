@@ -1,7 +1,7 @@
 from datetime import datetime
-import json
 
 from flask import Flask
+from flask import jsonify
 
 from generate_windy_pen_data import gen_pen_stroke
 from sds011_v2 import SDS011
@@ -21,8 +21,22 @@ def get_air_quality_reading():
 app = Flask(__name__)
 
 
-@app.route('/stroke')
+@app.route('/stroke', methods=["GET"])
 def get_pen_stroke():
     aq_reading = get_air_quality_reading()
     pen_stroke = gen_pen_stroke(aq_reading)
-    return json.dumps(pen_stroke)
+    return jsonify(pen_stroke)
+
+
+@app.after_request
+def add_cors_headers(response):
+    response.headers['Access-Control-Allow-Origin'] = '*'
+    return response
+
+    # response.headers.add('Access-Control-Allow-Origin', r)
+    # response.headers.add('Access-Control-Allow-Credentials', 'true')
+    # response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
+    # response.headers.add('Access-Control-Allow-Headers', 'Cache-Control')
+    # response.headers.add('Access-Control-Allow-Headers', 'X-Requested-With')
+    # response.headers.add('Access-Control-Allow-Headers', 'Authorization')
+    # response.headers.add('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, DELETE')

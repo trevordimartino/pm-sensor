@@ -2,3 +2,4 @@
 .flake8
 Pipfile.lock
 .ipynb_checkpoints/
+__pycache__/

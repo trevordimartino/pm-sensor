@@ -11,7 +11,7 @@ from sds011_v2 import SDS011
 
 
 DEVICE_LOCATION = '/dev/ttyUSB0'
-WORK_PERIOD = 10  # Number of minutes between readings, up to 30
+WORK_PERIOD = 10  # Number of minutes between readings, up to 30; 0 is continuous
 GOOGLE_APP_CREDS_PATH = '/home/pi/Downloads/pm-sensor-creds.json'
 
 logging.basicConfig(level=logging.DEBUG)
@@ -20,7 +20,6 @@ with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
     s.connect(("8.8.8.8", 80))  # Google's DNS
     ip_address = s.getsockname()[0]
 
-# Credentials pulled from file named in GOOGLE_APPLICATION_CREDENTIALS os env var
 creds = credentials.Certificate(GOOGLE_APP_CREDS_PATH)
 app = firebase_admin.initialize_app(creds)
 db = firestore.client()
